@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Конфигурация компа</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div>🖥️Конфигурация компа</div>
+    <button class="login-btn" onclick="toggleModal()">Войти</button>
+  </header>
+
+  <div class="tiles" id="tilesContainer">
+    <div class="tile" style="background-color: #7cf9d6;" onclick="showQuestionPage()">
+      <div class="tile-icon" onclick="goToConfigPage()">+</div>
+      <div class="tile-label" contenteditable="true" oninput="handleInput(this)">Название</div>
+    </div>
+  </div>
+  
+
+
+  <footer>
+    <div>© 2025 Конфигурация компа</div>
+    <div>
+      <a href="mailto:help@example.com">Помощь</a>
+      <a href="#">Условия</a>
+      <a href="#">Контакты</a>
+    </div>
+  </footer>
+
+  <div class="modal" id="loginModal">
+    <div class="modal-content">
+      <button class="close-btn" onclick="toggleModal()">✕</button>
+      <h3>Вход</h3>
+      <input type="text" placeholder="Логин">
+      <input type="password" placeholder="Пароль">
+      <br>
+      <button onclick="toggleModal()">Войти</button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

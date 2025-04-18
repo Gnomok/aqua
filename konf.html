@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Сборка ПК</title>
+  <link rel="stylesheet" href="style.css" />
+<!-- Рабочая версия three.js -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.127.0/build/three.min.js"></script>
+<!-- Рабочий OBJLoader для неё -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.127.0/examples/js/loaders/OBJLoader.js"></script>
+
+</head>
+<body>
+  <header>
+    <div>🧩 Выбор комплектующих</div>
+    <button class="login-btn" onclick="window.location.href='main.html'">Назад</button>
+  </header>
+
+  <div id="scene-container"></div>
+
+  <footer>
+    <div>© 2025 Сборка ПК</div>
+  </footer>
+
+  <!-- Модальное окно выбора варианта -->
+  <div class="modal" id="componentModal">
+    <div class="modal-content">
+      <button class="close-btn" onclick="toggleModal()">✕</button>
+      <h3 id="modalTitle">Выберите компонент</h3>
+      <select id="componentOptions">
+        <!-- Варианты будут подставляться -->
+      </select>
+      <br><br>
+      <button onclick="saveSelection()">Сохранить</button>
+    </div>
+  </div>
+
+  <script src="konf.js"></script>
+</body>
+</html>
