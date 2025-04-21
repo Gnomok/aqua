@@ -5,10 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Сборка ПК</title>
   <link rel="stylesheet" href="style.css" />
-<!-- Рабочая версия three.js -->
-<script src="https://cdn.jsdelivr.net/npm/three@0.127.0/build/three.min.js"></script>
-<!-- Рабочий OBJLoader для неё -->
-<script src="https://cdn.jsdelivr.net/npm/three@0.127.0/examples/js/loaders/OBJLoader.js"></script>
 
 </head>
 <body>
@@ -17,24 +13,33 @@
     <button class="login-btn" onclick="window.location.href='main.html'">Назад</button>
   </header>
 
-  <div id="scene-container"></div>
-
-  <footer>
-    <div>© 2025 Сборка ПК</div>
-  </footer>
-
-  <!-- Модальное окно выбора варианта -->
+  <div class="pc-image-container">
+    <img src="img/image.png" usemap="#pcmap" alt="Сборка ПК" class="pc-image">
+    
+    <!-- Карта активных зон -->
+    <map name="pcmap">
+      <area shape="rect" coords="90,40,190,130" alt="Блок питания" onclick="openModal('Блок питания')">
+      <area shape="rect" coords="140,150,240,220" alt="Процессор" onclick="openModal('Процессор')">
+      <area shape="rect" coords="250,140,310,230" alt="Оперативная память" onclick="openModal('Оперативная память')">
+      <area shape="rect" coords="80,260,300,300" alt="Материнская плата" onclick="openModal('Материнская плата')">
+      <area shape="rect" coords="60,320,260,360" alt="Видеокарта" onclick="openModal('Видеокарта')">
+      <area shape="rect" coords="320,280,400,350" alt="Жесткий диск" onclick="openModal('Жесткий диск')">
+    </map>
+  </div>
   <div class="modal" id="componentModal">
     <div class="modal-content">
       <button class="close-btn" onclick="toggleModal()">✕</button>
       <h3 id="modalTitle">Выберите компонент</h3>
-      <select id="componentOptions">
-        <!-- Варианты будут подставляться -->
-      </select>
+      <select id="componentOptions"></select>
       <br><br>
       <button onclick="saveSelection()">Сохранить</button>
     </div>
   </div>
+  
+  <footer>
+    <div>© 2025 Сборка ПК</div>
+  </footer>
+
 
   <script src="konf.js"></script>
 </body>
