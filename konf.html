@@ -1,45 +1,40 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
   <title>Сборка ПК</title>
-  <link rel="stylesheet" href="style.css" />
-
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header>
-    <div>🧩 Выбор комплектующих</div>
-    <button class="login-btn" onclick="window.location.href='main.html'">Назад</button>
+    <h1 id="configTitle">Сборка ПК</h1>
   </header>
-
-  <div class="pc-image-container">
-    <img src="img/image.png" usemap="#pcmap" alt="Сборка ПК" class="pc-image">
-    
-    <!-- Карта активных зон -->
-    <map name="pcmap">
-      <area shape="rect" coords="90,40,190,130" alt="Блок питания" onclick="openModal('Блок питания')">
-      <area shape="rect" coords="140,150,240,220" alt="Процессор" onclick="openModal('Процессор')">
-      <area shape="rect" coords="250,140,310,230" alt="Оперативная память" onclick="openModal('Оперативная память')">
-      <area shape="rect" coords="80,260,300,300" alt="Материнская плата" onclick="openModal('Материнская плата')">
-      <area shape="rect" coords="60,320,260,360" alt="Видеокарта" onclick="openModal('Видеокарта')">
-      <area shape="rect" coords="320,280,400,350" alt="Жесткий диск" onclick="openModal('Жесткий диск')">
-    </map>
-  </div>
-  <div class="modal" id="componentModal">
-    <div class="modal-content">
-      <button class="close-btn" onclick="toggleModal()">✕</button>
-      <h3 id="modalTitle">Выберите компонент</h3>
-      <select id="componentOptions"></select>
-      <br><br>
-      <button onclick="saveSelection()">Сохранить</button>
+  <main>
+    <div class="component-list" id="componentList">
+      <!-- Компоненты будут подгружены сюда из builder.js -->
     </div>
-  </div>
-  
+  </main>
   <footer>
-    <div>© 2025 Сборка ПК</div>
+    <button onclick="saveFullBuild()">Сохранить сборку</button>
   </footer>
 
+  <!-- Модальное окно выбора компонента -->
+  <div class="modal" id="componentModal">
+    <div class="modal-content wide">
+      <button class="close-btn" onclick="toggleComponentModal()">✕</button>
+      <h3 id="modalComponentTitle">Выбор компонента</h3>
+      <div class="filters">
+        <input type="text" id="searchInput" placeholder="Поиск по названию..." oninput="filterComponents()">
+        <div class="price-range">
+          <input type="number" id="minPrice" placeholder="Мин. цена" oninput="filterComponents()">
+          <input type="number" id="maxPrice" placeholder="Макс. цена" oninput="filterComponents()">
+        </div>
+      </div>
+      <div class="component-grid" id="modalComponentGrid">
+        <!-- Компоненты подгружаются сюда -->
+      </div>
+    </div>
+  </div>
 
   <script src="konf.js"></script>
 </body>
