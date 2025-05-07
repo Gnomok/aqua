@@ -8,13 +8,24 @@ const typeMapping = {
   case: 7
 };
 
+let selectedComponents = [];
+
+
+const typeIdToName = Object.fromEntries(
+  Object.entries(typeMapping).map(([key, value]) => [value, key])
+);
+
+
 // Теперь локальный API
-const API_URL = 'http://157.158.136.173:5001';
+const API_URL = 'https://localhost:7140';
 
 let currentComponentType = '';
 let allComponents = [];
 let currentConfigurationId = null;
-
+const userId = "default-user";
+const urlParams = new URLSearchParams(window.location.search);
+const configurationName = urlParams.get('title');
+console.log('Имя конфигурации:', configurationName);
 // Создание новой конфигурации
 async function createConfiguration() {
   try {
@@ -59,7 +70,7 @@ async function loadComponentsForType(type) {
     const data = await response.json();
     console.log('Получены компоненты:', data);
 
-    allComponents = data.filter(c => c.type?.toLowerCase() === type.toLowerCase());
+    allComponents = data.filter(c => typeIdToName[c.typeId]?.toLowerCase() === type.toLowerCase());
     displayComponents(allComponents);
   } catch (error) {
     console.error('Ошибка загрузки компонентов:', error);
@@ -77,7 +88,7 @@ function displayComponents(components) {
     card.onclick = () => selectComponent(component);
 
     card.innerHTML = `
-      <img src="${component.image}" alt="${component.name}">
+      <img src="${component.imageUrl}" alt="${component.name}">
       <strong>${component.name}</strong>
       <p>${component.price} $</p>
     `;
@@ -109,12 +120,11 @@ async function selectComponent(component) {
   }
 
   try {
-    const response = await fetch(`${API_URL}/configurator/Configurations/${currentConfigurationId}/components`, {
+    const response = await fetch(`${API_URL}/configurator/Configurations/${currentConfigurationId}/add-component/${component.id}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ componentId: component.id })
     });
 
     if (!response.ok) {
@@ -123,12 +133,20 @@ async function selectComponent(component) {
       throw new Error('Ошибка сервера: ' + response.status);
     }
 
-    const data = await response.json();
+    const data = await response.text();
     console.log('Компонент добавлен:', data);
+
+    // Добавляем компонент в массив selectedComponents
+    selectedComponents.push(component);
 
     const slot = document.getElementById(`slot-${currentComponentType}`);
     if (slot) {
-      slot.innerText = component.name;
+      slot.innerHTML = `
+        <div class="tile-icon">
+          <img src="${component.imageUrl}" alt="${component.name}">
+        </div>
+        <div class="tile-label small-label">${component.name}</div>
+      `;
     }
 
     toggleComponentModal();
@@ -137,23 +155,24 @@ async function selectComponent(component) {
   }
 }
 
+
 // Настройка списка слотов для компонентов
 function setupComponentSlots() {
   const components = [
-    { type: 'motherboard', label: 'Материнская плата' },
-    { type: 'cpu', label: 'Процессор' },
-    { type: 'ram', label: 'Оперативная память' },
-    { type: 'gpu', label: 'Видеокарта' },
-    { type: 'storage', label: 'Накопитель' },
-    { type: 'psu', label: 'Блок питания' },
-    { type: 'case', label: 'Корпус' }
+    { type: 'motherboard', label: 'Płyta główna' },
+    { type: 'cpu', label: 'Procesor' },
+    { type: 'ram', label: 'Pamięć RAM' },
+    { type: 'gpu', label: 'Karta graficzna' },
+    { type: 'storage', label: 'Dysk' },
+    { type: 'psu', label: 'Zasilacz' },
+    { type: 'case', label: 'Obudowa' }
   ];
 
   const list = document.getElementById('componentList');
   list.innerHTML = '';
   components.forEach(comp => {
     const tile = document.createElement('div');
-    tile.className = 'tile';
+    tile.className = 'tile config-tile';
     tile.id = `slot-${comp.type}`;
     tile.onclick = () => toggleComponentModal(comp.type);
 
@@ -161,7 +180,7 @@ function setupComponentSlots() {
       <div class="tile-icon">
         <img src="icons/${comp.type}.png" alt="${comp.label}">
       </div>
-      <div class="tile-label">Выбрать ${comp.label}</div>
+      <div class="tile-label"> ${comp.label}</div>
     `;
 
     list.appendChild(tile);
@@ -170,17 +189,28 @@ function setupComponentSlots() {
 
 // Сохранение всей сборки
 async function saveFullBuild() {
-  if (!currentConfigurationId) {
-    alert('Конфигурация ещё не создана!');
+  const urlParams = new URLSearchParams(window.location.search);
+  const configurationName = urlParams.get('title');
+  console.log('Имя конфигурации:', configurationName);
+
+  if (!configurationName) {
+    alert('Имя конфигурации не указано!');
     return;
   }
 
+  const payload = {
+    name: configurationName,
+    userId: userId,
+    components: selectedComponents.map(component => component.id) // Отправляем только ID компонентов
+  };
+
   try {
-    const response = await fetch(`${API_URL}/configurator/Configurations/${currentConfigurationId}/save`, {
-      method: 'POST',
+    const response = await fetch("https://localhost:7140/configurator/Configurations", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json'
-      }
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
     });
 
     if (!response.ok) {
@@ -195,8 +225,23 @@ async function saveFullBuild() {
   }
 }
 
+
+
+
+
+
+
+
+
+
+
+
 // Инициализация страницы
 document.addEventListener('DOMContentLoaded', async () => {
   await createConfiguration();
   setupComponentSlots();
 });
+
+function goToMain() {
+  window.location.href = 'main.html';
+}

@@ -3,15 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Конфигурация компа</title>
+  <title>Konfiguracja komputera</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header>
-    <div>🖥️Конфигурация компа</div>
+    <div>🖥️ Konfiguracja komputera</div>
     <div>
       <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
-      <button class="login-btn" onclick="toggleModal()">Войти</button>
+      <button class="login-btn" onclick="toggleModal()">Zaloguj się</button>
+      <button class="register-btn" onclick="toggleRegisterModal()">Zarejestruj się</button>
     </div>
   </header>
 
@@ -19,31 +20,45 @@
     <div class="tiles" id="tilesContainer">
       <div class="tile add-tile" onclick="addTile()" title="Нажмите, чтобы добавить компонент">
         <div class="tile-icon">＋</div>
-        <div class="tile-label">Добавить</div>
+        <div class="tile-label">Dodaj</div>
       </div>
     </div>
   </main>
 
   <footer>
-    <div>© 2025 Конфигурация компа</div>
+    <div>© 2025 Konfiguracja komputera</div>
     <div>
-      <a href="mailto:help@example.com">Помощь</a>
-      <a href="#">Условия</a>
-      <a href="#">Контакты</a>
+      <a href="mailto:help@example.com">Pomoc</a>
+      <a href="#">Warunki</a>
+      <a href="#">Kontakt</a>
     </div>
   </footer>
 
   <div class="modal" id="loginModal">
     <div class="modal-content">
       <button class="close-btn" onclick="toggleModal()">✕</button>
-      <h3>Вход</h3>
-      <input type="text" placeholder="Логин" />
-      <input type="password" placeholder="Пароль" />
+      <h3>Logowanie</h3>
+      <input type="text" id="loginInput" placeholder="Login" />
+      <input type="password" id="loginPassword" placeholder="Hasło" />
       <br />
-      <button onclick="toggleModal()">Войти</button>
+      <button onclick="login()">Zaloguj się</button>
     </div>
   </div>
-
+  
+  <div class="modal" id="registerModal">
+    <div class="modal-content">
+      <button class="close-btn" onclick="toggleRegisterModal()">✕</button>
+      <h3>Rejestracja</h3>
+      <input type="text" id="registerLogin" placeholder="Login" />
+      <input type="password" id="registerPassword" placeholder="Hasło" />
+      <input type="password" id="registerConfirmPassword" placeholder="Potwierdź hasło" />
+      <br />
+      <button onclick="register()">Zarejestruj się</button>
+      <p id="registerError" style="color: red; font-size: 14px; display: none;">Hasła nie są takie same!</p>
+    </div>
+  </div>
+  
+  
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <script src="script.js"></script>
 </body>

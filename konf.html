@@ -2,12 +2,12 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Сборка ПК</title>
+  <title>Konfiguracja komputera</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header>
-    <h1 id="configTitle">Сборка ПК</h1>
+    <h1 id="configTitle">Konfiguracja komputera</h1>
   </header>
   <main>
     <div class="component-list" id="componentList">
@@ -15,19 +15,20 @@
     </div>
   </main>
   <footer>
-    <button onclick="saveFullBuild()">Сохранить сборку</button>
+    <button onclick="saveFullBuild()">Save</button>
+    <button onclick="goToMain()">Back</button>
   </footer>
 
   <!-- Модальное окно выбора компонента -->
   <div class="modal" id="componentModal">
     <div class="modal-content wide">
       <button class="close-btn" onclick="toggleComponentModal()">✕</button>
-      <h3 id="modalComponentTitle">Выбор компонента</h3>
+      <h3 id="modalComponentTitle">Wybór komponentu</h3>
       <div class="filters">
-        <input type="text" id="searchInput" placeholder="Поиск по названию..." oninput="filterComponents()">
+        <input type="text" id="searchInput" placeholder="Szukaj po nazwie..." oninput="filterComponents()">
         <div class="price-range">
-          <input type="number" id="minPrice" placeholder="Мин. цена" oninput="filterComponents()">
-          <input type="number" id="maxPrice" placeholder="Макс. цена" oninput="filterComponents()">
+          <input type="number" id="minPrice" placeholder="Cena min." oninput="filterComponents()">
+          <input type="number" id="maxPrice" placeholder="Cena maks." oninput="filterComponents()">
         </div>
       </div>
       <div class="component-grid" id="modalComponentGrid">
