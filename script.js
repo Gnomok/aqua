@@ -1,54 +1,65 @@
 const API_URL = 'https://localhost:7140/configurator';
 
-
-
-function loadTiles() {
-  const savedTiles = JSON.parse(localStorage.getItem('tiles') || '[]');
-  savedTiles.forEach(name => addTile(name));
-  const data = JSON.parse(localStorage.getItem('tilesData'));
-  if (!data) return;
-
-  data.forEach(tileInfo => {
-    const tile = document.createElement('div');
-    tile.className = 'tile';
-    tile.style.backgroundColor = tileInfo.color;
-    tile.setAttribute('data-tooltip', 'Konfiguracja komponentu');
-    
-    // Добавляем кнопку удаления
-    const deleteButton = document.createElement('button');
-    deleteButton.className = 'delete-btn';
-    deleteButton.innerHTML = '✖';
-    deleteButton.onclick = (event) => {
-    event.stopPropagation(); // ← ключевая строка
-    tile.remove();
-    saveTiles();
-};
-tile.appendChild(deleteButton);
-
-    tile.innerHTML += `
-      <div class="tile-icon"><img src="img/gpu-icon.svg" alt="icon"></div>
-      <div class="tile-label" contenteditable="true">${tileInfo.name}</div>
-    `;
-
-    // Добавляем обработчик для сохранения изменений в названии
-    const label = tile.querySelector('.tile-label');
-    label.addEventListener('input', () => {
-      saveTiles(); // Сохраняем состояние плиток сразу после изменения
-    });
-
-    tile.addEventListener('click', (e) => {
-      if (e.target.classList.contains('tile-label')) return;
-      const title = tile.querySelector('.tile-label').innerText.trim();
-      window.location.href = `konf.html?title=${encodeURIComponent(title)}`;
-    });
-
-    const container = document.getElementById('tilesContainer');
-    container.insertBefore(tile, container.querySelector('.add-tile'));
-  });
+const userLogin = localStorage.getItem('userLogin');
+if (userLogin) {
+  document.getElementById('userInfo').innerText = `Zalogowano jako: ${userLogin}`;
 }
 
-// Загружаем плитки при старте
-loadTiles();
+function createAddTileButton() {
+  const addTileElement = document.createElement('div');
+  addTileElement.className = 'tile add-tile';
+  addTileElement.innerHTML = '<div class="tile-icon">＋</div><div class="tile-label">Dodaj konfigurację</div>';
+  addTileElement.addEventListener('click', () => addTile());
+  return addTileElement;
+}
+
+
+window.onload = () => {
+  const userLogin = localStorage.getItem('userLogin');
+  const userId = localStorage.getItem('userId');
+  
+  // Check if user is logged in by checking for userId and userLogin in localStorage
+  if (userLogin && userId) {
+    // User is logged in, update the UI accordingly
+    document.getElementById('userInfo').innerText = `Zalogowano jako: ${userLogin}`;
+    document.getElementById('userInfo').innerHTML = `
+      <span>Zalogowano jako: ${userLogin}</span>
+      <button onclick="logout()">Wyloguj się</button>
+    `;
+    document.getElementById('userInfo').style.display = 'flex';
+    loadTiles(); // Load the user's configurations
+  } else {
+    // If no user is logged in, display login modal
+    document.getElementById('userInfo').innerText = 'Nie zalogowano';
+  }
+};
+
+
+
+async function loadTiles() {
+  const userId = localStorage.getItem('userId');
+  const container = document.getElementById('tilesContainer');
+  container.querySelectorAll('.tile').forEach(tile => tile.remove());
+
+  if (userId) {
+    const res = await fetch(`${API_URL}/Users/Configurations/${userId}`);
+    if (!res.ok) {
+      console.error('Błąd podczas pobierania konfiguracji');
+      return;
+    }
+
+    const configurations = await res.json();
+    configurations.forEach(config => addTile(config.name, config.id));
+  } else {
+    const guestConfigs = JSON.parse(localStorage.getItem('guestConfigs') || '[]');
+    guestConfigs.forEach(config => addTile(config.name, config.id));
+  }
+
+  container.appendChild(createAddTileButton());
+}
+
+
+
 
 
 
@@ -60,55 +71,126 @@ function toggleModal() {
   modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
 }
 
-function addTile(name = 'Nazwa') {
-  const colors = ['#6feeb7', '#7fccb6', '#74a7b2', '#8faff2', '#e4b7ff'];
+async function addTile(name = 'Nowa konfiguracja', configId = null) {
+  const userId = localStorage.getItem('userId');
+  
+  if (!configId) {
+    if (userId) {
+      const response = await fetch(`${API_URL}/Configurations/${userId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(name)
+      });
+    
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Błąd walidacji:', errorData);
+        return;
+      }
+    
+      const data = await response.json(); // ← тут может быть просто true, если API не возвращает ID
+      configId = data.id || Date.now();
+    } else {
+      // Незарегистрированный пользователь — генерируем временный ID
+      configId = 'guest-' + Date.now();
+      const guestConfigs = JSON.parse(localStorage.getItem('guestConfigs') || '[]');
+      guestConfigs.push({ id: configId, name });
+      localStorage.setItem('guestConfigs', JSON.stringify(guestConfigs));
+    }
+  }
+
+  
+
   const tile = document.createElement('div');
   tile.className = 'tile';
-  tile.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-  tile.setAttribute('data-tooltip', 'Konfiguracja komponentu');
+  tile.style.backgroundColor = '#8faff2'; // Цвет можно оставить случайным
+  tile.setAttribute('data-id', configId);
 
   tile.innerHTML = `
     <div class="tile-icon"><img src="img/gpu-icon.svg" alt="icon"></div>
     <div class="tile-label" contenteditable="true">${name}</div>
   `;
 
-  // Крестик (удаление)
+  // Добавляем кнопку удаления
   const deleteButton = document.createElement('button');
   deleteButton.className = 'delete-btn';
   deleteButton.innerHTML = '✖';
-  deleteButton.addEventListener('click', (event) => {
-    event.stopPropagation(); // ⛔ блокируем переход по ссылке
+  deleteButton.addEventListener('click', async (e) => { 
+    e.stopPropagation();
+    const userId = localStorage.getItem('userId');
+  
+    if (userId) {
+      await fetch(`${API_URL}/Configurations/${configId}`, { method: 'DELETE' });
+    } else {
+      const guestConfigs = JSON.parse(localStorage.getItem('guestConfigs') || '[]');
+      const updated = guestConfigs.filter(cfg => cfg.id !== configId);
+      localStorage.setItem('guestConfigs', JSON.stringify(updated));
+    }
+  
     tile.remove();
-    saveTiles();
   });
+  
   tile.appendChild(deleteButton);
 
-  // Переход при клике на плитку (если не редактируем)
   tile.addEventListener('click', (e) => {
     if (e.target.classList.contains('tile-label')) return;
-    const title = tile.querySelector('.tile-label').innerText.trim();
-    window.location.href = `konf.html?title=${encodeURIComponent(title)}`;
+    const name = tile.querySelector('.tile-label').innerText.trim();
+    localStorage.setItem('currentConfigName', name);
+    localStorage.setItem('currentUserId', localStorage.getItem('userId') || '');
+    window.location.href = `konf.html?configId=${configId}`;
   });
+  
 
-  const container = document.getElementById('tilesContainer');
-  container.insertBefore(tile, container.querySelector('.add-tile'));
+  document.getElementById('tilesContainer').insertBefore(tile, document.querySelector('.add-tile'));
 
-  saveTiles();
+  const label = tile.querySelector('.tile-label');
+
+
+  label.addEventListener('blur', async () => {
+  const newName = label.innerText.trim();
+  const userId = localStorage.getItem('userId');
+
+  if (userId) {
+    // Удаляем старую конфигурацию с сервера
+    const configIdNumber  = parseInt(configId, 10);
+    await fetch(`${API_URL}/Configurations/${configId}`, { method: 'DELETE' });
+
+    // Теперь создаем новую конфигурацию с новым именем
+    const response = await fetch(`${API_URL}/Configurations/${userId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newName)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Ошибка при создании новой конфигурации:', errorData);
+      return;
+    }
+
+    // Получаем новый ID конфигурации (если нужно)
+    const data = await response.json();
+    configId = data.id; // Обновляем ID конфигурации
+    tile.setAttribute('data-id', configId); // Обновляем ID в атрибуте плитки
+
+  } else {
+    // Обновление локальной конфигурации (для незарегистрированного пользователя)
+    const guestConfigs = JSON.parse(localStorage.getItem('guestConfigs') || '[]');
+    const updated = guestConfigs.map(cfg =>
+      cfg.id === configId ? { ...cfg, name: newName } : cfg
+    );
+    localStorage.setItem('guestConfigs', JSON.stringify(updated));
+  }
+
+  // Обновляем название плитки, чтобы отобразить новое имя
+  tile.querySelector('.tile-label').innerText = newName;
+});
+
+  
+
 }
+  
 
-
-
-
-
-
-function saveTiles() {
-  const tiles = Array.from(document.querySelectorAll('.tile')).filter(t => !t.classList.contains('add-tile'));
-  const data = tiles.map(tile => ({
-    color: tile.style.backgroundColor,
-    name: tile.querySelector('.tile-label').innerText.trim() // Сохраняем изменённое название
-  }));
-  localStorage.setItem('tilesData', JSON.stringify(data));
-}
 
 
 
@@ -156,6 +238,7 @@ async function register() {
   }
 }
 
+
 async function login() {
   const loginInput = document.getElementById('loginInput').value.trim();
   const passwordInput = document.getElementById('loginPassword').value;
@@ -174,10 +257,39 @@ async function login() {
     }
 
     localStorage.setItem('userId', user.id);
+    localStorage.setItem('userLogin', user.login);
+
+    document.getElementById('userInfo').style.display = 'flex';
+
     alert(`Zalogowano jako ${user.login}`);
     toggleModal();
+    document.getElementById('userInfo').innerText = `Zalogowano jako: ${user.login}`;
+    document.getElementById('userInfo').innerHTML = `
+      <span>Zalogowano jako: ${user.login}</span>
+      <button onclick="logout()">Wyloguj się</button>
+    `;
+    
+    loadTiles(); // <--- ТУТ вызывается после логина
 
   } catch (err) {
     alert('Błąd podczas logowania.');
   }
 }
+
+
+
+function logout() {
+  localStorage.removeItem('userId');
+  localStorage.removeItem('userLogin');
+  document.getElementById('userInfo').innerText = 'Nie zalogowano';
+  // Очистить все плитки
+  document.querySelectorAll('.tile').forEach(tile => tile.remove());
+}
+
+
+
+window.login = login;
+window.logout = logout;
+window.register = register;
+window.toggleModal = toggleModal;
+window.toggleRegisterModal = toggleRegisterModal;
