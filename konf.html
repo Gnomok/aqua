@@ -16,6 +16,10 @@
   </main>
   <footer>
     <!--<button onclick="saveFullBuild()">Save</button> --->
+    <div id="total-price" class="text-right font-bold text-xl p-4">
+  Summa: 0 zł
+</div>
+
     <button onclick="goToMain()">Back</button>
   </footer>
 
@@ -24,6 +28,7 @@
     <div class="modal-content wide">
       <button class="close-btn" onclick="toggleComponentModal()">✕</button>
       <h3 id="modalComponentTitle">Wybór komponentu</h3>
+      <div id="componentDetails" style="position:absolute; top:20px; right:40px; width:320px; background:#fff; border-radius:8px; box-shadow:0 2px 8px #0002; padding:16px; z-index:1001; display:none;"></div>
       <div class="filters">
         <input type="text" id="searchInput" placeholder="Szukaj po nazwie..." oninput="filterComponents()">
         <div class="price-range">
@@ -33,10 +38,10 @@
       </div>
       <div class="component-grid" id="modalComponentGrid">
         <!-- Компоненты подгружаются сюда -->
+         
       </div>
     </div>
   </div>
-
   <script src="konf.js"></script>
 </body>
 </html>

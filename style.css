@@ -429,3 +429,24 @@ header > div {
   font-weight: 500;
   color: #fff;
 }
+.info-btn {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-size: 20px;
+  color: #74a7b2;
+  background: #fff;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+  border: 1px solid #d0d0d0;
+  box-shadow: 0 1px 4px #0001;
+}
+.component-card {
+  position: relative;
+}

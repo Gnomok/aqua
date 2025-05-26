@@ -284,8 +284,9 @@ function logout() {
   document.getElementById('userInfo').innerText = 'Nie zalogowano';
   // Очистить все плитки
   document.querySelectorAll('.tile').forEach(tile => tile.remove());
+  // Добавить плитки для гостя
+  loadTiles();
 }
-
 
 
 window.login = login;

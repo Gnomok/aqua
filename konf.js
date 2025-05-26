@@ -96,12 +96,35 @@ async function createConfiguration() {
 async function loadConfigurationComponents() {
   if (!currentConfigurationId) return;
 
+  // Для гостей — грузим из localStorage
+  if (!userId) {
+    const guestConfigs = JSON.parse(localStorage.getItem('guestConfigs') || '[]');
+    const config = guestConfigs.find(cfg => cfg.id === currentConfigurationId);
+    const components = config && config.components ? config.components : [];
+    selectedComponents = components;
+
+    components.forEach(component => {
+      const slot = document.getElementById(`slot-${typeIdToName[component.typeId]}`);
+      if (slot) {
+        slot.innerHTML = `
+          <div class="tile-icon">
+            <img src="${component.imageUrl}" alt="${component.name}">
+          </div>
+          <div class="tile-label small-label">${component.name}</div>
+          <button class="remove-btn" onclick="removeComponent('${component.typeId}', '${typeIdToName[component.typeId]}')">🗑</button>
+        `;
+      }
+    });
+    updateTotalPrice({ components });
+    return;
+  }
+
+  // Для авторизованных — грузим с сервера
   try {
     const response = await fetch(`${API_URL}/configurator/Configurations/Components/${currentConfigurationId}`);
     const components = await response.json();
     console.log('Konfiguracja załadowana z serwera:', components);
 
-    // Обновляем каждый слот с компонентами
     selectedComponents = components;
     components.forEach(component => {
       const slot = document.getElementById(`slot-${typeIdToName[component.typeId]}`);
@@ -115,6 +138,7 @@ async function loadConfigurationComponents() {
         `;
       }
     });
+    updateTotalPrice({ components });
   } catch (error) {
     console.error('Nie udało się załadować konfiguracji z serwera', error);
   }
@@ -129,7 +153,7 @@ async function loadConfiguration() {
 
   let config;
   
-  // Для авторизованных пользователей загружаем с сервера
+  // Для авторизованных пользователей загружаем с сервара
   if (userId) {
     const response = await fetch(`${API_URL}/configurator/Configurations/${configIdFromUrl}`);
     if (response.ok) {
@@ -157,7 +181,6 @@ async function loadConfiguration() {
   }
 }
 
-
 // Открытие/закрытие модального окна
 async function toggleComponentModal(componentType = '') {
   const modal = document.getElementById('componentModal');
@@ -174,7 +197,7 @@ async function loadComponentsForType(type) {
   if (!currentConfigurationId) {
     console.error('Не задан ID конфигурации!');
     return;
-  }  
+  }
   try {
     const typeId = typeMapping[type];
 
@@ -183,24 +206,68 @@ async function loadComponentsForType(type) {
       return;
     }
 
-    let url = `${API_URL}/configurator/Components`; // по умолчанию все
+    let components = [];
+    if (userId) {
+      // Для авторизованных — используем серверный эндпоинт
+      const url = `${API_URL}/configurator/Configurations/${currentConfigurationId}/SuitableComponentsByType/${typeId}`;
+      console.log(`Запрашиваю компоненты с URL: ${url}`);
+      const response = await fetch(url);
+      components = await response.json();
+    } else {
+      // Для гостей — получаем все компоненты и фильтруем по typeId
+      const url = `${API_URL}/configurator/Components`;
+      console.log(`Запрашиваю все компоненты с URL: ${url}`);
+      const response = await fetch(url);
+      const all = await response.json();
+      if (Array.isArray(all)) {
+        components = all.filter(c => c.typeId === typeId);
 
-    if (currentConfigurationId) {
-      url = `${API_URL}/configurator/Configurations/${currentConfigurationId}/SuitableComponentsByType/${typeId}`;
+        // --- ДОБАВЬ ЭТУ ЧАСТЬ: фильтрация по параметрам ---
+        // Пример: если выбираем процессор, фильтруем по сокету выбранной материнки
+        if (type === 'cpu') {
+          const guestConfigs = JSON.parse(localStorage.getItem('guestConfigs') || '[]');
+          const config = guestConfigs.find(cfg => cfg.id === currentConfigurationId);
+          const motherboard = config && config.components
+            ? config.components.find(c => c.typeId === typeMapping['motherboard'])
+            : null;
+          if (motherboard && motherboard.parameters && motherboard.parameters.Socket) {
+            components = components.filter(cpu =>
+              cpu.parameters && cpu.parameters.Socket === motherboard.parameters.Socket
+            );
+          }
+        }
+        // Аналогично можно добавить фильтрацию для других типов (ram, storage и т.д.)
+        // Например, для ram фильтровать по MemoryType материнки
+        if (type === 'ram') {
+          const guestConfigs = JSON.parse(localStorage.getItem('guestConfigs') || '[]');
+          const config = guestConfigs.find(cfg => cfg.id === currentConfigurationId);
+          const motherboard = config && config.components
+            ? config.components.find(c => c.typeId === typeMapping['motherboard'])
+            : null;
+          if (motherboard && motherboard.parameters && motherboard.parameters.MemoryType) {
+            components = components.filter(ram =>
+              ram.parameters && ram.parameters.MemoryType === motherboard.parameters.MemoryType
+            );
+          }
+        }
+        // --- конец фильтрации ---
+      } else {
+        components = [];
+      }
     }
 
-    console.log(`Запрашиваю компоненты с URL: ${url}`);
-    const response = await fetch(url);
-    const data = await response.json();
-    console.log('Получены компоненты:', data);
+    if (!Array.isArray(components)) {
+      console.error('Ошибка API:', components);
+      displayComponents([]);
+      return;
+    }
 
-    allComponents = data;
+    allComponents = components;
     displayComponents(allComponents);
   } catch (error) {
     console.error('Ошибка загрузки компонентов:', error);
   }
 }
-
 
 // Отображение компонентов в модалке
 function displayComponents(components) {
@@ -210,16 +277,55 @@ function displayComponents(components) {
   components.forEach(component => {
     const card = document.createElement('div');
     card.className = 'component-card';
-    card.onclick = () => selectComponent(component);
-
     card.innerHTML = `
+      <span class="info-btn" title="Pokazać parametry">&#8505;</span>
       <img src="${component.imageUrl}" alt="${component.name}">
       <strong>${component.name}</strong>
-      <p>${component.price} $</p>
+      <p>${component.price} zł</p>
     `;
+
+    // Клик по карточке — выбрать компонент
+    card.onclick = () => selectComponent(component);
+
+    // Клик по иконке — показать параметры
+    card.querySelector('.info-btn').onclick = (e) => {
+      e.stopPropagation(); // Не срабатывает выбор компонента
+      showComponentParameters(component);
+    };
 
     grid.appendChild(card);
   });
+}
+
+// Показывает только параметры компонента справа вверху модального окна
+function showComponentParameters(component) {
+  const detailsDiv = document.getElementById('componentDetails');
+  if (!detailsDiv) return;
+
+  let paramsHtml = '';
+  if (component.parameters) {
+    paramsHtml = '<ul style="padding-left:18px;">';
+    for (const [key, value] of Object.entries(component.parameters)) {
+      paramsHtml += `<li><strong>${key}:</strong> ${value}</li>`;
+    }
+    paramsHtml += '</ul>';
+  } else {
+    paramsHtml = '<p>Brak parametrów</p>';
+  }
+
+  detailsDiv.innerHTML = `
+    <button class="close-btn" style="position:absolute;top:8px;right:12px;" onclick="closeComponentDetails(event)">✕</button>
+    <h4 style="margin-top:0;">Parametry</h4>
+    ${paramsHtml}
+  `;
+  detailsDiv.style.display = 'block';
+}
+
+// Закрытие блока параметров
+function closeComponentDetails(event) {
+  event.stopPropagation();
+  const detailsDiv = document.getElementById('componentDetails');
+  if (detailsDiv) detailsDiv.style.display = 'none';
 }
 
 // Фильтрация компонентов
@@ -237,6 +343,7 @@ function filterComponents() {
   displayComponents(filtered);
 }
 
+
 // Выбор компонента
 async function selectComponent(component) {
   if (!currentConfigurationId) {
@@ -246,6 +353,35 @@ async function selectComponent(component) {
 
   const typeId = component.typeId;
 
+  if (!userId) {
+    // Гость: работаем только с localStorage
+    // Удаляем старый компонент этого типа
+    selectedComponents = selectedComponents.filter(c => c.typeId !== typeId);
+    selectedComponents.push(component);
+
+    // Сохраняем компоненты в localStorage
+    const guestConfigs = JSON.parse(localStorage.getItem('guestConfigs') || '[]');
+    const config = guestConfigs.find(cfg => cfg.id === currentConfigurationId);
+    if (config) config.components = selectedComponents;
+    localStorage.setItem('guestConfigs', JSON.stringify(guestConfigs));
+
+    // Обновляем UI плитки
+    const slot = document.getElementById(`slot-${currentComponentType}`);
+    if (slot) {
+      slot.innerHTML = `
+        <div class="tile-icon">
+          <img src="${component.imageUrl}" alt="${component.name}">
+        </div>
+        <div class="tile-label small-label">${component.name}</div>
+        <button class="remove-btn" onclick="removeComponent('${component.typeId}', '${currentComponentType}')">🗑</button>
+      `;
+    }
+    updateTotalPrice({ components: selectedComponents });
+    toggleComponentModal();
+    return;
+  }
+
+  // --- Дальше твой код для авторизованных ---
   try {
     // 1. Удаляем старый компонент этого типа, если он уже выбран
     const existing = selectedComponents.find(c => c.typeId === typeId);
@@ -296,7 +432,14 @@ async function selectComponent(component) {
         <button class="remove-btn" onclick="removeComponent('${component.typeId}', '${currentComponentType}')">🗑</button>
       `;
     }
-    
+    // Обновляем сумму после добавления компонента
+    const componentsResp = await fetch(`${API_URL}/configurator/Configurations/Components/${currentConfigurationId}`);
+    if (componentsResp.ok) {
+      const componentsData = await componentsResp.json();
+      updateTotalPrice({ components: componentsData });
+    } else {
+      console.warn('Не удалось получить компоненты конфигурации');
+    }
 
     toggleComponentModal(); // Закрываем модалку
   } catch (error) {
@@ -304,6 +447,21 @@ async function selectComponent(component) {
   }
 }
 
+function updateTotalPrice(configuration) {
+  if (!configuration || !Array.isArray(configuration.components)) {
+    console.warn('Отсутствует массив компонентов в конфигурации');
+    document.getElementById("total-price").innerText = `Сумма: 0.00 zł`;
+    return;
+  }
+
+  let total = 0;
+  configuration.components.forEach(component => {
+    if (component && component.price) {
+      total += component.price;
+    }
+  });
+  document.getElementById("total-price").innerText = `Summa: ${total.toFixed(2)} zł`;
+}
 
 // Настройка списка слотов для компонентов
 function setupComponentSlots() {
@@ -378,6 +536,33 @@ async function saveFullBuild() {
 async function removeComponent(typeId, typeName) {
   if (!currentConfigurationId) return;
 
+  if (!userId) {
+    // Для гостей — работаем только с localStorage
+    // Удаляем компонент из выбранных
+    selectedComponents = selectedComponents.filter(c => c.typeId != typeId);
+
+    // Сохраняем изменения в localStorage
+    const guestConfigs = JSON.parse(localStorage.getItem('guestConfigs') || '[]');
+    const config = guestConfigs.find(cfg => cfg.id === currentConfigurationId);
+    if (config) config.components = selectedComponents;
+    localStorage.setItem('guestConfigs', JSON.stringify(guestConfigs));
+
+    // Очищаем слот
+    const slot = document.getElementById(`slot-${typeName}`);
+    if (slot) {
+      slot.innerHTML = `
+        <div class="tile-icon">
+          <img src="icons/${typeName}.png" alt="${typeName}">
+        </div>
+        <div class="tile-label"> ${typeName}</div>
+      `;
+    }
+    updateTotalPrice({ components: selectedComponents });
+    console.log(`Компонент типа ${typeName} удалён (гость).`);
+    return;
+  }
+
+  // Для авторизованных — серверный запрос
   try {
     const response = await fetch(`${API_URL}/configurator/Configurations/${currentConfigurationId}/Component/${typeId}`, {
       method: 'DELETE'
@@ -402,25 +587,13 @@ async function removeComponent(typeId, typeName) {
         <div class="tile-label"> ${typeName}</div>
       `;
     }
+    updateTotalPrice({ components: selectedComponents });
 
     console.log(`Компонент типа ${typeName} удалён.`);
   } catch (err) {
     console.error('Ошибка при удалении компонента:', err);
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
